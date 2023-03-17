@@ -129,8 +129,15 @@ This symbol is a drop in replacement for `__proto__`. Its name indicates that it
 
 ## Symbol.ctor
 
-This symbol is a drop in replacement for the `constructor` property. Usages of the constructor property can also happen outside of application code. For example, [point 3](https://tc39.es/ecma262/#sec-arrayspeciescreate) of the `ArraySpeciesCreate` algorithm or [point 1](https://html.spec.whatwg.org/multipage/custom-elements.html#element-definition) of the custom elements in HTML.
+This symbol is a drop in replacement for the `constructor` property.
+
 # Adoption considerations
+
+## `IsConstructor` in other specifications
+
+Unfortunately, there are several specifications that rely on the [IsConstructor](https://tc39.es/ecma262/#sec-isconstructor) definition. This adds friction to removing the `constructor` property because even if an application's codebase doesn't use `constructor` anywhere, usages of the constructor property can still happen at runtime. 
+
+Examples of these are [point 3](https://tc39.es/ecma262/#sec-arrayspeciescreate) of the `ArraySpeciesCreate` algorithm, which references the `constructor` property explicitly or [point 1](https://html.spec.whatwg.org/multipage/custom-elements.html#element-definition) of the custom elements in HTML. 
 
 ## Parse-time automatic refactoring
 
@@ -143,3 +150,22 @@ To maximize the number of codebases compatible with secure mode, we propose an a
 After these drop-in replacements, only code locations that access these properties dynamically will fail, e.g. `object[key]` where `key` is `__proto__` at runtime.
 
 While this refactoring isn't enough to enable secure mode by default for all applications, it significantly lowers the bar for adoption, as it allows developers to focus solely on cases that are, by definition, potentially vulnerable. The process of refactoring those cases is, in itself, a way to remove patterns that lead to pollution vulnerabilities.
+
+## Computed access in minimized JS
+
+Some toolchains produce JS bundles that leverage computed access to minimize the size of the bundle. This is incompatible with parse-time automatic refactoring because it hides accesses to the `__proto__` or `constructor` using static analysis. We have queried the [HTTP Archive](http://httparchive.org) to get an estimate as to how common this pattern is. The following table shows that pages with this behavior are consistently below 1% throughout the last 12 months for all pages crawled with a desktop browser:
+
+| Table              | Documents accessing `__proto__` or `constructor` dynamically | Total number of crawled documents | Ratio |
+|--------------------|--------------------------------------------------------------|-----------------------------------|-------|
+| 2023_03_01_desktop |                                                    5,407,936 |                       609,469,458 | 0.89% |
+| 2023_02_01_desktop |                                                    4,842,383 |                       549,089,708 | 0.88% |
+| 2023_01_01_desktop |                                                    5,283,826 |                       589,519,160 | 0.90% |
+| 2022_12_01_desktop |                                                    5,161,471 |                       577,073,883 | 0.89% |
+| 2022_11_01_desktop |                                                    5,023,169 |                       561,726,239 | 0.89% |
+| 2022_10_01_desktop |                                                    4,393,377 |                       476,880,624 | 0.92% |
+| 2022_09_01_desktop |                                                    4,239,257 |                       466,278,762 | 0.91% |
+| 2022_08_01_desktop |                                                    4,259,814 |                       463,784,047 | 0.92% |
+| 2022_07_01_desktop |                                                    3,011,137 |                       339,468,615 | 0.89% |
+| 2022_06_01_desktop |                                                    2,301,317 |                       257,501,222 | 0.89% |
+| 2022_04_01_desktop |                                                    2,368,577 |                       263,144,657 | 0.90% |
+| 2022_03_01_desktop |                                                    2,319,518 |                       259,249,013 | 0.89% |
